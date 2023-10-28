@@ -8,7 +8,7 @@ from transformers import AutoModelForTokenClassification, AutoTokenizer
 
 class Ner_Models:
     def __init__(self):
-        
+        pass
 
     def ner_en(self,text):
     # load tagger
