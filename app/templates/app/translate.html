@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Audio Recorder</title>
+</head>
+
+<body>
+    <button id="startButton">Start Recording</button>
+    <button id="stopButton" disabled>Stop Recording</button>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        const startButton = document.getElementById("startButton");
+        const stopButton = document.getElementById("stopButton");
+
+        startButton.addEventListener("click", startRecording);
+        stopButton.addEventListener("click", stopRecording);
+
+        startButton.disabled = false;
+
+        startButton.onclick = startRecording;
+        stopButton.onclick = stopRecording;
+
+
+        function startRecording() {
+            navigator.mediaDevices
+                .getUserMedia({ audio: true })
+                .then(function (stream) {
+                    mediaRecorder = new MediaRecorder(stream);
+
+                    mediaRecorder.ondataavailable = function (e) {
+                        if (e.data.size > 0) {
+                            audioChunks.push(e.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = function () {
+                        const websocket = new WebSocket('ws://'
+                            + window.location.host
+                            + '/ws/app/translate/'
+                        );
+                        const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+                        blobToBytes(audioBlob, function (bytes) {
+                            console.log("Bytes of recorded audio:", bytes);
+
+                            websocket.onopen = function () {
+                                const reader = new FileReader();
+                                console.log(reader)
+
+                                reader.onloadend = () => {
+                                    //const base64data = reader.result.split(',')[1];
+                                    //websocket.send(base64data);
+
+                                    console.log("inside send")
+                                    websocket.send(JSON.stringify({ type: 'audio', audio: reader.result }));
+                                    console.log('data sent .', reader.result)
+
+                                };
+                                //reader.readAsDataURL(audioBlob);
+
+
+                            };
+
+                        });
+
+
+
+
+                        websocket.onclose = function () {
+                            console.log("WebSocket connection closed.");
+                        };
+
+                        websocket.onerror = function (error) {
+                            console.error("WebSocket error: ", error);
+                        };
+                    };
+
+                    mediaRecorder.start();
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                })
+                .catch(function (error) {
+                    console.error("Error accessing the microphone:", error);
+                });
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+
+        function blobToBytes(blob, callback) {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const arrayBuffer = event.target.result;
+                const bytes = new Uint8Array(arrayBuffer);
+                callback(bytes);
+            };
+
+            reader.readAsArrayBuffer(blob);
+        }
+        function bytesToAudioFile(byteArray, fileName, fileType) {
+            const blob = new Blob([new Uint8Array(byteArray)], { type: fileType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+
+
+
+    </script>
+</body>
+
+</html>
+
+<!-- 
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Audio Streaming</title>
+</head>
+
+<body>
+    <button id="startButton">Start Streaming</button>
+    <button id="stopButton" disabled>Stop Streaming</button>
+
+    <script>
+        let mediaRecorder;
+        let websocket;
+
+        const startButton = document.getElementById("startButton");
+        const stopButton = document.getElementById("stopButton");
+
+        startButton.onclick = startStreaming;
+        stopButton.onclick = stopStreaming;
+
+        function startStreaming() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(function (stream) {
+                    mediaRecorder = new MediaRecorder(stream);
+
+                    websocket = new WebSocket('ws://'
+                        + window.location.host
+                        + '/ws/app/translate/');
+
+                    websocket.onopen = function () {
+                        mediaRecorder.ondataavailable = function (event) {
+                            if (event.data.size > 0) {
+                                websocket.send(event.data);
+                                console.log(event.data)
+                                websocket.onmessage = e => {
+                                    const datar = JSON.parse(e.data);
+                                    console.log("from server ", datar)
+                                };
+                            }
+                        };
+
+                        mediaRecorder.start();
+                        startButton.disabled = true;
+                        stopButton.disabled = false;
+                    };
+
+                    websocket.onclose = function () {
+                        console.log("WebSocket connection closed.");
+                    };
+                })
+                .catch(function (error) {
+                    console.error("Error accessing the microphone:", error);
+                });
+        }
+
+        function stopStreaming() {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                if (websocket) {
+                    websocket.close();
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
+-->
