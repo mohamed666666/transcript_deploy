@@ -33,6 +33,7 @@ class TranslatorConsumer(AsyncWebsocketConsumer):
         # You can call:
         ent1,ent2,labels1,labels2=[],[],[],[]
         Nermodel=Ner_Models()
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         model = whisper.load_model('base', device=device)
         text_data_json = json.loads(text_data)
         slang=text_data_json["from"]
