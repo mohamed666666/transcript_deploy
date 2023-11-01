@@ -1,6 +1,8 @@
 import json
 from googletrans import Translator, LANGUAGES
 import wave
+import torch
+
 from asgiref.sync import async_to_sync
 from googletrans import Translator, LANGUAGES
 from channels.generic.websocket import AsyncWebsocketConsumer
