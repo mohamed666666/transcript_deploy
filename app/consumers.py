@@ -33,9 +33,10 @@ class TranslatorConsumer(AsyncWebsocketConsumer):
         # You can call:
         ent1,ent2,labels1,labels2=[],[],[],[]
         Nermodel=Ner_Models()
-        model = whisper.load_model("tiny")
+        model = whisper.load_model('base', device=device)
         text_data_json = json.loads(text_data)
-        
+        slang=text_data_json["from"]
+        dstlang=text_data_json["to"]
         audio_base64_str = text_data_json.get('data').split(",")[1] # Get only the base64 content, removing the MIME type prefix.
         audio_bytes = base64.b64decode(audio_base64_str)  # Decode the base64 string to bytes
 
@@ -45,19 +46,17 @@ class TranslatorConsumer(AsyncWebsocketConsumer):
         with open(audio_file_path, 'wb') as f:
                 f.write(audio_bytes)
 
-        result = model.transcribe(audio_file_path)
+        result = model.transcribe(audio_file_path, language=slang)
         os.remove(audio_file_path)
 
-        slang=text_data_json["from"]
-        dstlang=text_data_json["to"]
+       
         
         translator = Translator()
         transl="translation does not complete try again . "
         if result["text"]:
-            translation = translator.translate(result["text"], src='en', dest='ar')
+            translation = translator.translate(result["text"], src=slang, dest=dstlang)
             transl=translation.text
-
-
+            '''
         if slang =='en' :
             ent1,labels1=Nermodel.ner_es(result["text"])
         if dstlang=='en':
@@ -75,12 +74,9 @@ class TranslatorConsumer(AsyncWebsocketConsumer):
         if dstlang=='ar':
             ent2,labels2=Nermodel.ner_ar(transl)
 
-        
+        '''
        
 
-        
-        
-	
         
         await self.send(text_data=json.dumps({
                         'text':result["text"] ,
@@ -90,7 +86,7 @@ class TranslatorConsumer(AsyncWebsocketConsumer):
                             "entity":ent1
                          },
                         "highlightedWords":{
-                            "labels":labels2,
+                            "label":labels2,
                             "entity":ent2
                         }
 
